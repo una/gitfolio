@@ -2,7 +2,8 @@ var fs = require('fs');
 var http = require('http')
   , url = require('url')
   , qs = require('querystring')
-  , github = require('octonode');
+  , github = require('octonode')
+  , ghme;
 
 module.exports = function(req, res) {
   var clientID, clientSecret;
@@ -27,12 +28,14 @@ module.exports = function(req, res) {
 
   // Redirect to github login
     if (uri.pathname=='/login') {
+      var client = github.client();
       res.writeHead(302, {'Content-Type': 'text/plain', 'Location': auth_url})
       res.end('Redirecting to ' + auth_url);
     }
     // Callback url from github login
-    else if (uri.pathname=='/auth') {
+    else if (uri.pathname=='/auth/github/callback') {
       var values = qs.parse(uri.query);
+
       // Check against CSRF attacks
       if (!state || state[1] != values.state) {
         res.writeHead(403, {'Content-Type': 'text/plain'});
@@ -47,4 +50,11 @@ module.exports = function(req, res) {
       res.writeHead(200, {'Content-Type': 'text/plain'})
       res.end('');
     }
+
+    ghme = client.me();
+    ghme.info(function(err, data, headers) {
+      console.log("error: " + err);
+      console.log("data: " + data);
+      console.log("headers:" + headers);
+    });
 };

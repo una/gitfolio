@@ -1,3 +1,5 @@
 node_modules/
-public/components
+public/
 .sass-cache
+client_id.txt
+client_secret.txt

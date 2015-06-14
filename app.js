@@ -12,6 +12,7 @@ var oAuth = require('./middleware/oAuth');
 var routes = require('./routes/index');
 var users = require('./routes/user');
 var test = require('./routes/test');
+var welcome = require('./routes/welcome');
 
 var app = express();
 
@@ -41,6 +42,7 @@ app.use('/users', users);
 
 app.get('/login', oAuth);
 app.get('/test', test);
+app.get('/auth/github/callback', welcome);
 
 /// catch 404 and forward to error handler
 app.use(function(req, res, next) {
