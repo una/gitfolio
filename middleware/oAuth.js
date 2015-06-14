@@ -2,11 +2,11 @@ var fs = require('fs');
 var http = require('http')
   , url = require('url')
   , qs = require('querystring')
-  , github = require('octonode')
-  , ghme;
+  , github = require('octonode');
 
 module.exports = function(req, res) {
   var clientID, clientSecret;
+  var ghme;
 
   if (process.env.NODE_ENV === 'production') {
     clientID = process.env.GH_CLIENT_ID;
@@ -57,4 +57,6 @@ module.exports = function(req, res) {
       console.log("data: " + data);
       console.log("headers:" + headers);
     });
+    console.log(ghme);
+    // eventually return ghme info;
 };
