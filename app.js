@@ -1,66 +1,80 @@
-var http = require('http');
-var qs = require('querystring');
-var utility= require('./utility');
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var swig = require('swig');
 var fs = require('fs');
-var request =require('superagent');
-var clientID, clientSecret;
-var redirect_uri = 'http://localhost:3000/auth/github/callback';
 var env = process.env.NODE_ENV || 'development';
+var oAuth = require('./middleware/oAuth');
 
-if (env === 'production') {
-  clientID = process.env.GH_CLIENT_ID;
-  clientSecret = process.env.GH_CLIENT_SECRET;
-} else {
-    clientID = fs.readFileSync('./client_id.txt', 'utf8');
-    clientSecret = fs.readFileSync('./client_secret.txt', 'utf8');
+var routes = require('./routes/index');
+var users = require('./routes/user');
+var test = require('./routes/test');
+
+var app = express();
+
+app.use(express.static(__dirname + '/public', { extensions: ['html'] }));
+app.use(express.static(__dirname + '/public'));
+
+// view engine setup
+app.engine('swig', swig.renderFile)
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'swig');
+
+var env = process.env.NODE_ENV || 'development';
+app.locals.ENV = env;
+app.locals.ENV_DEVELOPMENT = env == 'development';
+
+// app.use(favicon(__dirname + '/public/img/favicon.ico'));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', routes);
+app.use('/users', users);
+
+app.get('/login', oAuth);
+app.get('/test', test);
+
+/// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+/// error handlers
+
+// development error handler
+// will print stacktrace
+
+if (app.get('env') === 'development') {
+    app.use(function(err, req, res, next) {
+        res.status(err.status || 500);
+        res.render('error', {
+            message: err.message,
+            error: err,
+            title: 'error'
+        });
+    });
 }
 
-http.createServer(function (req, res) {
-    var p = req.url.split('/');
-    pLen = p.length;
-    if (req.url === '/favicon.ico') {
-        res.writeHead(200, {'Content-Type': 'image/x-icon'} );
-        res.end();
-         return;
-    }
-    var loginURL='https://github.com/login/oauth/authorize';
-    var authURL=utility.getAuthorizedUrl(loginURL,{
-                  client_id:clientID,
-                  redirect_uri: redirect_uri,
-                  scope: ['repo', 'user'],
-                  state: 'example return string'
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+        message: err.message,
+        error: {},
+        title: 'error'
     });
-/**
-* Creating an anchor with authURL as href and sending as response
-*/
-    var body = '<a href="' + authURL + '"> Get Code </a>';
-    if (pLen === 2 && p[1] === '') {
-        res.writeHead(200, {
-        'Content-Length': body.length,
-        'Content-Type': 'text/html' });
-        res.end(body);
-    } else if (pLen === 4 && p[1].indexOf('auth') === 0) {
-        /** Github sends auth code so that access_token can be obtained */
-        var qsObj = {};
-        /** To obtain and parse code='...' from code?code='...' */
-        qsObj = qs.parse(p[3].split('?')[1]);
-        var url='https://github.com/login/oauth/access_token?client_id='+clientID+'&redirect_uri='+redirect_uri+'&client_secret='+clientSecret+'&code='+qsObj.code;
-        request
-        .post(url)
-        .end(function(err, result) {
-            var start=result.text.indexOf('=');
-            var end=result.text.indexOf('&');
-            var userURL='https://api.github.com/user?access_token='+result.text.substring(start+1,end);
-            request.get(userURL, function(err, result){
-                if (err) throw err;
-                console.log(result.text);
-                res.end(result.text);
-            });
-        });
+});
 
-    } else {
-        // Unhandled url
-        console.log("Unhandled URL");
-        res.end("Unhandled URL");
-    }
-}).listen(3000);
+
+module.exports = app;

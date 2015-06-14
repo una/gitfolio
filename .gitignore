@@ -1,6 +1,3 @@
 node_modules/
-public/
-.jshintrc
-npm-debug.log
-client_id.txt
-client_secret.txt
+public/components
+.sass-cache
